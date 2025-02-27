@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
 import Profile from './pages/Profile';
 import Navbar from './components/Navbar';
+import WorkReports from './pages/WorkReports';
+import TargetTimeManagement from './pages/TargetTimeManagement';
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -72,6 +74,22 @@ function App() {
                   <ProtectedRoute>
                     <Profile />
                   </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/reports" 
+                element={
+                  <ProtectedRoute>
+                    <WorkReports />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/target-times" 
+                element={
+                  <AdminRoute>
+                    <TargetTimeManagement />
+                  </AdminRoute>
                 } 
               />
               <Route path="/" element={<Navigate to="/login" />} />

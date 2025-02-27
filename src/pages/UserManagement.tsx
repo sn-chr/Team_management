@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, Trash2, User, Mail, Lock, Shield } from 'lucide-react';
+import { UserPlus, Trash2, User, Mail, Lock, Shield, Pencil as PencilIcon } from 'lucide-react';
 
 interface UserData {
   id: number;
   name: string;
   email: string;
   role: 'admin' | 'user';
+  target_money: number;
   created_at: string;
 }
 
@@ -23,11 +24,22 @@ const UserManagement = () => {
     name: '',
     email: '',
     password: '',
-    role: 'user' as 'admin' | 'user'
+    role: 'user' as 'admin' | 'user',
+    target_money: 3000.00
   });
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Add new state for edit mode
+  const [editingUser, setEditingUser] = useState<null | {
+    id: number;
+    name: string;
+    email: string;
+    password: string;
+    role: 'admin' | 'user';
+    target_money: number;
+  }>(null);
 
   // Fetch users
   const fetchUsers = async () => {
@@ -78,7 +90,8 @@ const UserManagement = () => {
         name: '',
         email: '',
         password: '',
-        role: 'user'
+        role: 'user',
+        target_money: 3000.00
       });
       
       setFormSuccess('User added successfully');
@@ -91,6 +104,48 @@ const UserManagement = () => {
       setShowAddForm(false);
     } catch (err: any) {
       setFormError(err.response?.data?.message || 'Failed to add user');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle edit button click
+  const handleEditClick = (userData: UserData) => {
+    setEditingUser({
+      id: userData.id,
+      name: userData.name,
+      email: userData.email,
+      password: '',
+      role: userData.role,
+      target_money: userData.target_money
+    });
+    setShowAddForm(false);
+  };
+  
+  // Handle edit form submission
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingUser) return;
+    
+    try {
+      setIsSubmitting(true);
+      setFormError('');
+      
+      await axios.put(
+        `http://localhost:3090/api/users/${editingUser.id}`,
+        editingUser,
+        { withCredentials: true }
+      );
+      
+      setFormSuccess('User updated successfully');
+      setTimeout(() => setFormSuccess(''), 3000);
+      
+      // Refresh user list and reset edit mode
+      fetchUsers();
+      setEditingUser(null);
+    } catch (err: any) {
+      setFormError(err.response?.data?.message || 'Failed to update user');
     } finally {
       setIsSubmitting(false);
     }
@@ -145,10 +200,11 @@ const UserManagement = () => {
         </div>
       )}
       
-      {/* Add User Form */}
-      {showAddForm && (
+      {(showAddForm || editingUser) && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Add New User</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            {editingUser ? 'Edit User' : 'Add New User'}
+          </h2>
           
           {formError && (
             <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
@@ -156,7 +212,7 @@ const UserManagement = () => {
             </div>
           )}
           
-          <form onSubmit={handleAddUser}>
+          <form onSubmit={editingUser ? handleEditUser : handleAddUser}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -170,8 +226,14 @@ const UserManagement = () => {
                     id="name"
                     name="name"
                     type="text"
-                    value={newUser.name}
-                    onChange={handleInputChange}
+                    value={editingUser ? editingUser.name : newUser.name}
+                    onChange={(e) => {
+                      if (editingUser) {
+                        setEditingUser({ ...editingUser, name: e.target.value });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
                     className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="John Doe"
                     required
@@ -191,8 +253,14 @@ const UserManagement = () => {
                     id="email"
                     name="email"
                     type="email"
-                    value={newUser.email}
-                    onChange={handleInputChange}
+                    value={editingUser ? editingUser.email : newUser.email}
+                    onChange={(e) => {
+                      if (editingUser) {
+                        setEditingUser({ ...editingUser, email: e.target.value });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
                     className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="user@example.com"
                     required
@@ -212,8 +280,14 @@ const UserManagement = () => {
                     id="password"
                     name="password"
                     type="password"
-                    value={newUser.password}
-                    onChange={handleInputChange}
+                    value={editingUser ? editingUser.password : newUser.password}
+                    onChange={(e) => {
+                      if (editingUser) {
+                        setEditingUser({ ...editingUser, password: e.target.value });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
                     className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="••••••••"
                     required
@@ -232,8 +306,14 @@ const UserManagement = () => {
                   <select
                     id="role"
                     name="role"
-                    value={newUser.role}
-                    onChange={handleInputChange}
+                    value={editingUser ? editingUser.role : newUser.role}
+                    onChange={(e) => {
+                      if (editingUser) {
+                        setEditingUser({ ...editingUser, role: e.target.value as 'admin' | 'user' });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
                     className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
@@ -242,12 +322,42 @@ const UserManagement = () => {
                   </select>
                 </div>
               </div>
+              
+              <div>
+                <label htmlFor="target_money" className="block text-sm font-medium text-gray-700 mb-1">
+                  Target Money ($)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-400">$</span>
+                  </div>
+                  <input
+                    id="target_money"
+                    name="target_money"
+                    type="number"
+                    step="0.01"
+                    value={editingUser ? editingUser.target_money : newUser.target_money}
+                    onChange={(e) => {
+                      if (editingUser) {
+                        setEditingUser({ ...editingUser, target_money: parseFloat(e.target.value) });
+                      } else {
+                        handleInputChange(e);
+                      }
+                    }}
+                    className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="3000.00"
+                  />
+                </div>
+              </div>
             </div>
             
             <div className="flex justify-end space-x-3">
               <button
                 type="button"
-                onClick={() => setShowAddForm(false)}
+                onClick={() => {
+                  setEditingUser(null);
+                  setShowAddForm(false);
+                }}
                 className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Cancel
@@ -257,7 +367,7 @@ const UserManagement = () => {
                 disabled={isSubmitting}
                 className="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                {isSubmitting ? 'Adding...' : 'Add User'}
+                {isSubmitting ? (editingUser ? 'Updating...' : 'Adding...') : (editingUser ? 'Update User' : 'Add User')}
               </button>
             </div>
           </form>
@@ -287,6 +397,9 @@ const UserManagement = () => {
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Role
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Target Money
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created At
@@ -326,17 +439,28 @@ const UserManagement = () => {
                         {userData.role}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">${parseFloat(userData.target_money.toString()).toFixed(2)}</div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(userData.created_at).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {userData.id !== user?.id ? (
-                        <button
-                          onClick={() => handleDeleteUser(userData.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => handleEditClick(userData)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(userData.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-gray-400 cursor-not-allowed">
                           <Trash2 className="h-5 w-5" />
