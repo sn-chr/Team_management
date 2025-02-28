@@ -100,33 +100,33 @@ const TargetTimeManagement = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 dark:bg-gray-900">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">
           Target Time Management
         </h1>
 
         {error && (
-          <div className="mb-4 bg-red-50 text-red-600 p-4 rounded-md">
+          <div className="mb-4 bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400 p-4 rounded-md">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 bg-green-50 text-green-600 p-4 rounded-md">
+          <div className="mb-4 bg-green-50 dark:bg-green-900/50 text-green-600 dark:text-green-400 p-4 rounded-md">
             {success}
           </div>
         )}
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white shadow-md rounded-lg p-6"
+          className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6"
         >
           <div className="space-y-6">
             <div>
               <label
                 htmlFor="weekday_target"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
                 Weekday Target Hours
               </label>
@@ -140,13 +140,11 @@ const TargetTimeManagement = () => {
                   placeholder="HH:MM (e.g., 16:00)"
                   pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
                   value={targetTimes.weekday_target}
-                  onChange={(e) =>
-                    handleTimeChange("weekday_target", e.target.value)
-                  }
-                  onBlur={(e) =>
-                    handleTimeBlur("weekday_target", e.target.value)
-                  }
-                  className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => handleTimeChange("weekday_target", e.target.value)}
+                  onBlur={(e) => handleTimeBlur("weekday_target", e.target.value)}
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>
@@ -154,7 +152,7 @@ const TargetTimeManagement = () => {
             <div>
               <label
                 htmlFor="weekend_target"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
                 Weekend Target Hours
               </label>
@@ -168,13 +166,11 @@ const TargetTimeManagement = () => {
                   placeholder="HH:MM (e.g., 08:00)"
                   pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
                   value={targetTimes.weekend_target}
-                  onChange={(e) =>
-                    handleTimeChange("weekend_target", e.target.value)
-                  }
-                  onBlur={(e) =>
-                    handleTimeBlur("weekend_target", e.target.value)
-                  }
-                  className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => handleTimeChange("weekend_target", e.target.value)}
+                  onBlur={(e) => handleTimeBlur("weekend_target", e.target.value)}
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>
@@ -183,7 +179,10 @@ const TargetTimeManagement = () => {
           <div className="mt-6">
             <button
               type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm 
+                       text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 
+                       dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 
+                       focus:ring-blue-500 disabled:opacity-50"
             >
               Save Changes
             </button>

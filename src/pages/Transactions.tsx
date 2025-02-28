@@ -27,6 +27,8 @@ import countryList from 'react-select-country-list';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useTheme } from '../context/ThemeContext';
+import { components } from 'react-select';
 
 interface Transaction {
   id: number;
@@ -121,144 +123,35 @@ interface FormData {
   note: string;
 }
 
-// Custom styles for react-select
-const customSelectStyles = {
-  control: (base: any) => ({
-    ...base,
-    border: '1px solid #D1D5DB',
-    borderRadius: '0.375rem',
-    boxShadow: 'none',
-    '&:hover': {
-      borderColor: '#3B82F6'
-    }
-  }),
-  option: (base: any, state: any) => ({
-    ...base,
-    display: 'flex',
-    alignItems: 'center',
-    padding: '8px 12px',
-    cursor: 'pointer',
-    backgroundColor: state.isSelected ? '#3B82F6' : state.isFocused ? '#EFF6FF' : 'white',
-    '&:hover': {
-      backgroundColor: state.isSelected ? '#3B82F6' : '#EFF6FF'
-    }
-  })
+// Update the formatCountryData function
+const formatCountryData = () => {
+  return countryList().getData().map(country => ({
+    value: country.value,
+    label: country.label,
+    flag: `https://flagcdn.com/w20/${country.value.toLowerCase()}.png` // Using flagcdn.com
+  }));
 };
 
-// Custom country option component with flag
-const CountryOption = ({ innerProps, label, data }: any) => (
-  <div {...innerProps} className="flex items-center p-2 cursor-pointer hover:bg-blue-50">
-    <img
-      src={`https://flagcdn.com/24x18/${data.value.toLowerCase()}.png`}
-      alt={label}
-      className="mr-2 w-6 h-4 object-cover rounded-sm"
-    />
-    <span>{label}</span>
-  </div>
-);
-
-const getPaymentIcon = (type: string) => {
-  switch (type) {
-    case 'credit_card':
-    case 'debit_card':
-    case 'amex':
-    case 'mastercard':
-    case 'visa':
-      return <CreditCard className="w-5 h-5" />;
-    case 'paypal':
-    case 'google_pay':
-    case 'apple_pay':
-    case 'samsung_pay':
-    case 'alipay':
-    case 'wechat_pay':
-    case 'venmo':
-      return <Wallet className="w-5 h-5" />;
-    case 'bank_transfer':
-    case 'wire_transfer':
-    case 'sepa':
-    case 'ach':
-      return <Building2 className="w-5 h-5" />;
-    case 'bitcoin':
-    case 'ethereum':
-    case 'usdt':
-    case 'usdc':
-      return <Bitcoin className="w-5 h-5" />;
-    default:
-      return <DollarSign className="w-5 h-5" />;
+// Update the getFlagEmoji function to handle country codes correctly
+const getFlagEmoji = (countryCode: string) => {
+  if (!countryCode) return '';
+  
+  try {
+    // Convert country code to uppercase
+    const code = countryCode.toUpperCase();
+    // Convert the country code to regional indicator symbols
+    return code
+      .split('')
+      .map(letter => String.fromCodePoint(127397 + letter.charCodeAt(0)))
+      .join('');
+  } catch (error) {
+    console.error('Error creating flag emoji:', error);
+    return '';
   }
 };
 
-interface FilterData {
-  clientName: string;
-  clientCountry: SelectOption | null;
-  startDate: Date | null;
-  endDate: Date | null;
-  minAmount: string;
-  maxAmount: string;
-}
-
-// Custom notification styles
-const notifySuccess = (message: string) => {
-  toast.success(message, {
-    position: "top-right",
-    autoClose: 3000,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-    style: {
-      backgroundColor: '#10B981',
-      color: 'white',
-      fontSize: '14px',
-      padding: '16px',
-      borderRadius: '8px',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    }
-  });
-};
-
-const notifyError = (message: string) => {
-  toast.error(message, {
-    position: "top-right",
-    autoClose: 3000,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-    style: {
-      backgroundColor: '#EF4444',
-      color: 'white',
-      fontSize: '14px',
-      padding: '16px',
-      borderRadius: '8px',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    }
-  });
-};
-
-const notifyWarning = (message: string) => {
-  toast.warning(message, {
-    position: "top-right",
-    autoClose: 3000,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-    style: {
-      backgroundColor: '#F59E0B',
-      color: 'white',
-      fontSize: '14px',
-      padding: '16px',
-      borderRadius: '8px',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    }
-  });
-};
-
 export default function Transactions() {
+  const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -282,11 +175,10 @@ export default function Transactions() {
     maxAmount: ''
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const countries = countryList().getData().map(country => ({
-    ...country,
-    value: country.value.toLowerCase()
-  }));
+  // Update the countries constant
+  const countries = formatCountryData();
 
   // Handle date range changes
   const handleStartDateChange = (date: Date | null) => {
@@ -439,18 +331,194 @@ export default function Transactions() {
     </div>
   );
 
+  // Move customSelectStyles inside the component to access theme
+  const customSelectStyles = {
+    control: (base: any, state: any) => ({
+      ...base,
+      background: theme === 'dark' ? '#374151' : 'white',
+      borderColor: theme === 'dark' ? '#4B5563' : '#D1D5DB',
+      '&:hover': {
+        borderColor: theme === 'dark' ? '#6B7280' : '#9CA3AF',
+      },
+      boxShadow: state.isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.5)' : 'none',
+    }),
+    menu: (base: any) => ({
+      ...base,
+      background: theme === 'dark' ? '#1F2937' : 'white',
+      borderColor: theme === 'dark' ? '#4B5563' : '#D1D5DB',
+    }),
+    option: (base: any, state: any) => ({
+      ...base,
+      backgroundColor: state.isFocused 
+        ? theme === 'dark' ? '#374151' : '#EFF6FF'
+        : theme === 'dark' ? '#1F2937' : 'white',
+      color: theme === 'dark' ? '#E5E7EB' : '#111827',
+      '&:hover': {
+        backgroundColor: theme === 'dark' ? '#374151' : '#EFF6FF',
+      },
+      display: 'flex',
+      alignItems: 'center',
+    }),
+    singleValue: (base: any) => ({
+      ...base,
+      color: theme === 'dark' ? '#E5E7EB' : '#111827',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+    }),
+    input: (base: any) => ({
+      ...base,
+      color: theme === 'dark' ? '#E5E7EB' : '#111827',
+    }),
+  };
+
+  // Update the CountryOption component
+  const CountryOption = ({ innerProps, label, data }: any) => (
+    <div 
+      {...innerProps} 
+      className="flex items-center p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+    >
+      <img 
+        src={data.flag}
+        alt={`${label} flag`}
+        className="w-5 h-4 mr-2 object-cover rounded-sm"
+        loading="lazy"
+      />
+      <span className="text-gray-900 dark:text-gray-100">{label}</span>
+    </div>
+  );
+
+  // Update the SingleValue component
+  const SingleValue = ({ children, ...props }: any) => (
+    <components.SingleValue {...props}>
+      <div className="flex items-center">
+        <img 
+          src={props.data.flag}
+          alt={`${children} flag`}
+          className="w-5 h-4 mr-2 object-cover rounded-sm"
+          loading="lazy"
+        />
+        <span>{children}</span>
+      </div>
+    </components.SingleValue>
+  );
+
+  const getPaymentIcon = (type: string) => {
+    switch (type) {
+      case 'credit_card':
+      case 'debit_card':
+      case 'amex':
+      case 'mastercard':
+      case 'visa':
+        return <CreditCard className="w-5 h-5" />;
+      case 'paypal':
+      case 'google_pay':
+      case 'apple_pay':
+      case 'samsung_pay':
+      case 'alipay':
+      case 'wechat_pay':
+      case 'venmo':
+        return <Wallet className="w-5 h-5" />;
+      case 'bank_transfer':
+      case 'wire_transfer':
+      case 'sepa':
+      case 'ach':
+        return <Building2 className="w-5 h-5" />;
+      case 'bitcoin':
+      case 'ethereum':
+      case 'usdt':
+      case 'usdc':
+        return <Bitcoin className="w-5 h-5" />;
+      default:
+        return <DollarSign className="w-5 h-5" />;
+    }
+  };
+
+  interface FilterData {
+    clientName: string;
+    clientCountry: SelectOption | null;
+    startDate: Date | null;
+    endDate: Date | null;
+    minAmount: string;
+    maxAmount: string;
+  }
+
+  // Custom notification styles
+  const notifySuccess = (message: string) => {
+    toast.success(message, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      style: {
+        backgroundColor: '#10B981',
+        color: 'white',
+        fontSize: '14px',
+        padding: '16px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+      }
+    });
+  };
+
+  const notifyError = (message: string) => {
+    toast.error(message, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      style: {
+        backgroundColor: '#EF4444',
+        color: 'white',
+        fontSize: '14px',
+        padding: '16px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+      }
+    });
+  };
+
+  const notifyWarning = (message: string) => {
+    toast.warning(message, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      style: {
+        backgroundColor: '#F59E0B',
+        color: 'white',
+        fontSize: '14px',
+        padding: '16px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+      }
+    });
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 dark:bg-gray-900">
       <ToastContainer />
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Transactions</h2>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Transactions</h1>
+          <p className="text-gray-600 dark:text-gray-400">Manage your financial transactions</p>
+        </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center px-4 py-2 rounded-md transition-all duration-200 ${
               showFilters 
-                ? 'bg-blue-50 text-blue-600 border border-blue-200' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-blue-50 text-blue-600 dark:bg-blue-900 dark:text-blue-300' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
           >
             <SlidersHorizontal className="w-5 h-5 mr-2" />
@@ -459,13 +527,22 @@ export default function Transactions() {
           <button
             onClick={() => {
               setIsEditing(false);
-              setEditingId(null);
-              resetForm();
+              setFormData({
+                clientName: '',
+                clientCountry: null,
+                amount: '',
+                paymentType: null,
+                date: new Date(),
+                note: ''
+              });
               setIsOpen(true);
             }}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium 
+                     rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 
+                     dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 
+                     focus:ring-blue-500"
           >
-            <Plus className="w-5 h-5 mr-2" />
+            <Plus className="h-5 w-5 mr-2" />
             Add Transaction
           </button>
         </div>
@@ -481,18 +558,20 @@ export default function Transactions() {
         leaveFrom="transform translate-y-0 opacity-100"
         leaveTo="transform -translate-y-4 opacity-0"
       >
-        <div className="bg-white p-6 rounded-lg shadow-lg mb-6 border border-gray-200">
-          <div className="flex flex-wrap gap-6">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-6 border border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Client Name Filter */}
-            <div className="flex-1 min-w-[240px]">
-              <label className="block text-sm font-medium text-gray-700 flex items-center mb-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center mb-2">
                 <User className="w-4 h-4 mr-2" />
                 Client Name
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   value={filterData.clientName}
                   onChange={(e) => setFilterData({ ...filterData, clientName: e.target.value })}
                   placeholder="Search by name..."
@@ -502,8 +581,8 @@ export default function Transactions() {
             </div>
 
             {/* Country Filter */}
-            <div className="flex-1 min-w-[240px]">
-              <label className="block text-sm font-medium text-gray-700 flex items-center mb-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center mb-2">
                 <Globe className="w-4 h-4 mr-2" />
                 Country
               </label>
@@ -511,81 +590,73 @@ export default function Transactions() {
                 options={countries}
                 value={filterData.clientCountry}
                 onChange={(value) => setFilterData({ ...filterData, clientCountry: value })}
-                styles={{
-                  ...customSelectStyles,
-                  container: (base) => ({
-                    ...base,
-                    flex: 1,
-                  })
-                }}
-                components={{ Option: CountryOption }}
+                styles={customSelectStyles}
+                components={{ Option: CountryOption, SingleValue }}
+                isSearchable
                 isClearable
                 placeholder="Filter by country"
+                className="text-sm"
               />
             </div>
 
-            {/* Amount Range Filter */}
-            <div className="flex-1 min-w-[240px]">
-              <label className="block text-sm font-medium text-gray-700 flex items-center mb-2">
-                <Receipt className="w-4 h-4 mr-2" />
-                Amount Range
+            {/* Date Range Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center mb-2">
+                <Calendar className="w-4 h-4 mr-2" />
+                Date Range
               </label>
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="number"
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    value={filterData.minAmount}
-                    onChange={(e) => setFilterData({ ...filterData, minAmount: e.target.value })}
-                    placeholder="Min"
-                  />
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                </div>
-                <span className="text-gray-500">-</span>
-                <div className="relative flex-1">
-                  <input
-                    type="number"
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    value={filterData.maxAmount}
-                    onChange={(e) => setFilterData({ ...filterData, maxAmount: e.target.value })}
-                    placeholder="Max"
-                  />
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                </div>
+              <div className="flex space-x-2">
+                <DatePicker
+                  selected={filterData.startDate}
+                  onChange={handleStartDateChange}
+                  selectsStart
+                  startDate={filterData.startDate}
+                  endDate={filterData.endDate}
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholderText="Start date"
+                />
+                <DatePicker
+                  selected={filterData.endDate}
+                  onChange={handleEndDateChange}
+                  selectsEnd
+                  startDate={filterData.startDate}
+                  endDate={filterData.endDate}
+                  minDate={filterData.startDate}
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholderText="End date"
+                />
               </div>
             </div>
 
-            {/* Date Range Filter */}
-            <div className="flex-1 min-w-[240px]">
-              <label className="block text-sm font-medium text-gray-700 flex items-center mb-2">
-                <Clock className="w-4 h-4 mr-2" />
-                Date Range
+            {/* Amount Range Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center mb-2">
+                <DollarSign className="w-4 h-4 mr-2" />
+                Amount Range
               </label>
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <DatePicker
-                    selected={filterData.startDate}
-                    onChange={handleStartDateChange}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholderText="Start date"
-                    isClearable
-                    maxDate={filterData.endDate || undefined}
-                  />
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                </div>
-                <span className="text-gray-500">-</span>
-                <div className="relative flex-1">
-                  <DatePicker
-                    selected={filterData.endDate}
-                    onChange={handleEndDateChange}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholderText="End date"
-                    isClearable
-                    minDate={filterData.startDate || undefined}
-                    disabled={!filterData.startDate}
-                  />
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                </div>
+              <div className="flex space-x-2">
+                <input
+                  type="number"
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholder="Min amount"
+                  value={filterData.minAmount}
+                  onChange={(e) => setFilterData({ ...filterData, minAmount: e.target.value })}
+                />
+                <input
+                  type="number"
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  placeholder="Max amount"
+                  value={filterData.maxAmount}
+                  onChange={(e) => setFilterData({ ...filterData, maxAmount: e.target.value })}
+                />
               </div>
             </div>
           </div>
@@ -593,96 +664,127 @@ export default function Transactions() {
       </Transition>
 
       {/* Transactions Table */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <div className="flex items-center">
-                  <User className="w-4 h-4 mr-2" />
-                  Client Name
-                </div>
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <div className="flex items-center">
-                  <Globe className="w-4 h-4 mr-2" />
-                  Country
-                </div>
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <div className="flex items-center">
-                  <Receipt className="w-4 h-4 mr-2" />
-                  Amount
-                </div>
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <div className="flex items-center">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Payment Type
-                </div>
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Date
-                </div>
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <div className="flex items-center">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Note
-                </div>
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {currentItems.map((transaction) => (
-              <tr key={transaction.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{transaction.clientName}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900/50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <div className="flex items-center">
-                    <img
-                      src={`https://flagcdn.com/24x18/${transaction.clientCountry.toLowerCase()}.png`}
-                      alt={transaction.clientCountry}
-                      className="mr-2 w-6 h-4 object-cover rounded-sm"
-                    />
-                    {countries.find(c => c.value === transaction.clientCountry.toLowerCase())?.label || transaction.clientCountry}
+                    <User className="w-4 h-4 mr-2" />
+                    Client Name
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">${transaction.amount}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <div className="flex items-center">
-                    {getPaymentIcon(transaction.paymentType)}
-                    <span className="ml-2">
-                      {paymentTypes.find(pt => pt.value === transaction.paymentType)?.label || transaction.paymentType}
-                    </span>
+                    <Globe className="w-4 h-4 mr-2" />
+                    Country
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {new Date(transaction.date).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">{transaction.note}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(transaction)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <Edit2 className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(transaction.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center">
+                    <Receipt className="w-4 h-4 mr-2" />
+                    Amount
                   </div>
-                </td>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center">
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Payment Type
+                  </div>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Date
+                  </div>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Note
+                  </div>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {currentItems.map((transaction) => (
+                <tr 
+                  key={transaction.id}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    {transaction.clientName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center">
+                      <img 
+                        src={`https://flagcdn.com/w20/${transaction.clientCountry.toLowerCase()}.png`}
+                        alt={`${transaction.clientCountry} flag`}
+                        className="w-5 h-4 mr-2 object-cover rounded-sm"
+                        loading="lazy"
+                      />
+                      <span>
+                        {countries.find(c => c.value === transaction.clientCountry)?.label || transaction.clientCountry}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600 dark:text-green-400">
+                    ${transaction.amount.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      {getPaymentIcon(transaction.paymentType)}
+                      <span className="ml-2">
+                        {paymentTypes.find(pt => pt.value === transaction.paymentType)?.label || transaction.paymentType}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {new Date(transaction.date).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {transaction.note}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEdit(transaction)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <Edit2 className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(transaction.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
@@ -721,7 +823,11 @@ export default function Transactions() {
 
       {/* Add/Edit Transaction Modal */}
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-10" onClose={() => setIsOpen(false)}>
+        <Dialog 
+          as="div" 
+          className="relative z-10" 
+          onClose={() => setIsOpen(false)}
+        >
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -731,11 +837,11 @@ export default function Transactions() {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-black bg-opacity-25" />
+            <div className="fixed inset-0 bg-black/25 dark:bg-black/40" />
           </Transition.Child>
 
           <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <div className="flex min-h-full items-center justify-center p-4">
               <Transition.Child
                 as={Fragment}
                 enter="ease-out duration-300"
@@ -745,74 +851,81 @@ export default function Transactions() {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl 
+                                      bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all"
+                >
                   <Dialog.Title
                     as="h3"
-                    className="text-lg font-medium leading-6 text-gray-900 mb-4"
+                    className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4"
                   >
                     {isEditing ? 'Edit Transaction' : 'Add New Transaction'}
                   </Dialog.Title>
+                  
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Client Name</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Client Name
+                      </label>
                       <input
                         type="text"
                         required
-                         className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 w-full"
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                                 text-sm font-medium text-gray-900 dark:text-gray-100 
+                                 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 
+                                 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                         value={formData.clientName}
                         onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Country</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Country
+                      </label>
                       <Select
                         options={countries}
                         value={formData.clientCountry}
                         onChange={(value: SelectOption | null) => setFormData({ ...formData, clientCountry: value })}
-                        className="mt-1"
                         styles={customSelectStyles}
-                        components={{ Option: CountryOption }}
+                        components={{ Option: CountryOption, SingleValue }}
                         isSearchable
                         placeholder="Select a country"
+                        className="text-sm"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Amount</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Amount
+                      </label>
                       <input
                         type="number"
                         required
-                        className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 w-full"
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                                 text-sm font-medium text-gray-900 dark:text-gray-100 
+                                 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 
+                                 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                         value={formData.amount}
                         onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Payment Type</label>
-                      <Select
-                        options={groupedPaymentTypes}
-                        value={formData.paymentType}
-                        onChange={(value: SelectOption | null) => setFormData({ ...formData, paymentType: value })}
-                        className="mt-1"
-                        styles={customSelectStyles}
-                        components={{ Option: PaymentOption }}
-                        isSearchable
-                        placeholder="Select payment type"
-                      />
-                    </div>
-
                     <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700">Date</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Date
+                      </label>
                       <div className="relative mt-1">
                         <DatePicker
                           selected={formData.date}
                           onChange={(date: Date | null) => setFormData({ ...formData, date: date || new Date() })}
-                          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 w-full"
+                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                                   text-sm font-medium text-gray-900 dark:text-gray-100 
+                                   bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 
+                                   focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                           dateFormat="MMMM d, yyyy"
                           showPopperArrow={false}
-                          calendarClassName="shadow-lg rounded-lg border border-gray-200"
+                          calendarClassName="shadow-lg rounded-lg border border-gray-200 dark:border-gray-600 
+                                          bg-white dark:bg-gray-800"
                           wrapperClassName="w-full"
                         />
                         <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none h-5 w-5" />
@@ -820,9 +933,14 @@ export default function Transactions() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Note</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Note
+                      </label>
                       <textarea
-                        className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 w-full"
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                                 text-sm font-medium text-gray-900 dark:text-gray-100 
+                                 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 
+                                 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                         rows={3}
                         value={formData.note}
                         onChange={(e) => setFormData({ ...formData, note: e.target.value })}
