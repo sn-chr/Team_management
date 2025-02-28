@@ -22,6 +22,12 @@ const Dashboard = () => {
   const [earningData, setEarningData] = useState([]);
   const [error, setError] = useState('');
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [dashboardStats, setDashboardStats] = useState({
+    totalUsers: 0,
+    monthlyPlan: 0,
+    monthlyProgress: 0,
+    topUser: 'N/A'
+  });
 
   const fetchDashboardData = async (date: Date) => {
     try {
@@ -37,8 +43,6 @@ const Dashboard = () => {
         `http://localhost:3090/api/reports/weekly?date=${formattedDate}`,
         { withCredentials: true }
       );
-
-      console.log('Received data:', workingTimeRes.data);
       setWorkingTimeData(workingTimeRes.data);
 
     } catch (err: any) {
@@ -49,8 +53,20 @@ const Dashboard = () => {
     }
   };
 
+  const fetchDashboardStats = async () => {
+    try {
+      const res = await axios.get('http://localhost:3090/api/dashboard/stats', {
+        withCredentials: true
+      });
+      setDashboardStats(res.data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData(currentWeek);
+    fetchDashboardStats();
   }, [currentWeek]);
 
   const handleWeekChange = (date: Date) => {
@@ -61,35 +77,31 @@ const Dashboard = () => {
     { 
       icon: Users,
       title: 'Total Users',
-      value: '12',
+      value: dashboardStats.totalUsers.toString(),
       subtitle: 'Active users'
     },
     {
       icon: DollarSign,
       title: 'Monthly Plan',
-      value: '$3,000',
+      value: `$${dashboardStats.monthlyPlan.toLocaleString()}`,
       subtitle: 'Total users plan'
     },
     {
       icon: Target,
       title: 'Current Status',
-      value: '85%',
+      value: `${dashboardStats.monthlyProgress}%`,
       subtitle: 'Monthly progress'
     },
     {
       icon: Award,
       title: 'Top User',
-      value: 'John Doe',
+      value: dashboardStats.topUser,
       subtitle: 'This month'
     }
   ];
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-        <p className="text-gray-600">Welcome back, {user?.name}!</p>
-      </div>
 
       {error && (
         <div className="mb-8 bg-red-50 text-red-600 p-4 rounded-md">

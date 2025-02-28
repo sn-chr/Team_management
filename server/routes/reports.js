@@ -29,9 +29,6 @@ router.get('/weekly', auth, async (req, res) => {
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    console.log('Start of week:', startOfWeek.toISOString());
-    console.log('End of week:', endOfWeek.toISOString());
-
     // Get all reports for the current week with user information and total hours
     const [reports] = await pool.query(
       `SELECT 
@@ -48,8 +45,6 @@ router.get('/weekly', auth, async (req, res) => {
       ORDER BY total_hours DESC, u.name`,
       [startOfWeek.toISOString(), endOfWeek.toISOString()]
     );
-
-    console.log('Found reports:', reports);
 
     // Get all users with their total hours for the week
     const [users] = await pool.query(
@@ -98,8 +93,6 @@ router.get('/weekly', auth, async (req, res) => {
 
     // Sort by total hours
     weeklyData.sort((a, b) => b.totalHours - a.totalHours);
-
-    console.log('Processed weekly data:', weeklyData);
     res.json(weeklyData);
 
   } catch (error) {

@@ -8,6 +8,7 @@ import userRoutes from './routes/users.js';
 import bcrypt from 'bcryptjs';
 import reportRoutes from './routes/reports.js';
 import targetTimesRoutes from './routes/targetTimes.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 // Load environment variables
 dotenv.config();
@@ -130,6 +131,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/target-times', targetTimesRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
