@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Clock, Calendar, Trash2, PencilIcon, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { timeFormat } from '../utils/timeFormat';
 
 interface WorkReport {
   id: number;
@@ -39,7 +40,7 @@ const WorkReports = () => {
   const [editingReport, setEditingReport] = useState<WorkReport | null>(null);
   const [formData, setFormData] = useState({
     report_date: new Date().toISOString().split('T')[0],
-    working_hours: 8,
+    working_hours: '08:00',
     description: ''
   });
   const [formError, setFormError] = useState('');
@@ -128,11 +129,19 @@ const WorkReports = () => {
     try {
       setIsSubmitting(true);
       setFormError('');
+
+      // Validate time format
+      if (!timeFormat.isValid(formData.working_hours)) {
+        setFormError('Please enter time in HH:MM format (e.g., 08:30)');
+        return;
+      }
+
+      // Convert HH:MM to decimal for database
+      const workingHours = timeFormat.toDecimal(formData.working_hours);
       
-      // Ensure working_hours is a number in the payload
       const payload = {
         ...formData,
-        working_hours: parseFloat(formData.working_hours.toString())
+        working_hours: workingHours
       };
       
       if (editingReport) {
@@ -155,7 +164,7 @@ const WorkReports = () => {
       // Reset form
       setFormData({
         report_date: new Date().toISOString().split('T')[0],
-        working_hours: 8,
+        working_hours: '08:00',
         description: ''
       });
       setShowForm(false);
@@ -333,23 +342,56 @@ const WorkReports = () => {
                   <label htmlFor="working_hours" className="block text-sm font-medium text-gray-700 mb-1">
                     Working Hours *
                   </label>
-                  <div className="relative">
+                  <div className="mt-1 relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Clock className="h-5 w-5 text-gray-400" />
                     </div>
                     <input
+                      type="text"
+                      name="working_hours"
                       id="working_hours"
-                      type="number"
-                      min="0"
-                      max="24"
-                      step="0.5"
-                      value={formData.working_hours}
-                      onChange={(e) => setFormData({ ...formData, working_hours: parseFloat(e.target.value) })}
-                      className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="8.0"
                       required
+                      placeholder="HH:MM (e.g., 08:30)"
+                      pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+                      value={formData.working_hours}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow only numbers and colon
+                        if (!/^[\d:]*$/.test(value)) return;
+
+                        // Auto-format as user types
+                        let formattedValue = value.replace(/[^\d]/g, ''); // Remove non-digits
+                        if (formattedValue.length > 2) {
+                          formattedValue = `${formattedValue.slice(0, 2)}:${formattedValue.slice(2, 4)}`;
+                        }
+                        
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          working_hours: formattedValue
+                        }));
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (!value) return;
+
+                        // Format on blur for incomplete inputs
+                        if (timeFormat.isValid(value)) {
+                          const [hours, minutes] = value.split(':');
+                          const formattedValue = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            working_hours: formattedValue
+                          }));
+                        }
+                      }}
+                      className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+                  {formError && formError.includes('time') && (
+                    <p className="mt-2 text-sm text-red-600">
+                      {formError}
+                    </p>
+                  )}
                 </div>
                 
                 <div>
@@ -433,16 +475,16 @@ const WorkReports = () => {
                       </div>
                       <div className="flex items-baseline">
                         <div className="text-lg font-medium text-gray-900">
-                          {report.working_hours.toFixed(2).replace('.', ':')} hours
+                          {timeFormat.toHHMM(report.working_hours)} hours
                         </div>
                         <div className="ml-2 text-sm">
                           {getReportStatus(report).difference >= 0 ? (
                             <span className="text-green-600">
-                              (+{getReportStatus(report).difference.toFixed(2).replace('.', ':')} hours)
+                              (+{timeFormat.toHHMM(getReportStatus(report).difference)})
                             </span>
                           ) : (
                             <span className="text-yellow-600">
-                              ({getReportStatus(report).difference.toFixed(2).replace('.', ':')} hours)
+                              ({timeFormat.toHHMM(getReportStatus(report).difference)})
                             </span>
                           )}
                         </div>
@@ -459,7 +501,7 @@ const WorkReports = () => {
                             ? 'text-green-600' 
                             : 'text-yellow-600'
                         }`}>
-                          Target: {getReportStatus(report).target.toFixed(2).replace('.', ':')} hours
+                          Target: {timeFormat.toHHMM(getReportStatus(report).target)} hours
                           {getReportStatus(report).isSunday && ' (Sunday)'}
                         </span>
                       </div>
@@ -470,7 +512,7 @@ const WorkReports = () => {
                           setEditingReport(report);
                           setFormData({
                             report_date: report.report_date,
-                            working_hours: report.working_hours,
+                            working_hours: timeFormat.toHHMM(report.working_hours),
                             description: report.description
                           });
                           setShowForm(true);

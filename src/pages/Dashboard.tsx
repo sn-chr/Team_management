@@ -1,64 +1,122 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { Users, UserCheck, Settings, Shield } from 'lucide-react';
+import { Users, DollarSign, Target, Award } from 'lucide-react';
+import StatsCard from '../components/dashboard/StatsCard';
+import WeeklyWorkingTimeTable from '../components/dashboard/WeeklyWorkingTimeTable';
+import EarningChart from '../components/dashboard/EarningChart';
+
+interface WorkingTimeData {
+  userId: number;
+  userName: string;
+  weeklyHours: {
+    [key: string]: number | null;
+  };
+  totalHours: number;
+}
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [workingTimeData, setWorkingTimeData] = useState<WorkingTimeData[]>([]);
+  const [earningData, setEarningData] = useState([]);
+  const [error, setError] = useState('');
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+
+  const fetchDashboardData = async (date: Date) => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // Format date for the API
+      const formattedDate = date.toISOString();
+      
+      console.log('Fetching data for date:', formattedDate);
+      
+      const workingTimeRes = await axios.get(
+        `http://localhost:3090/api/reports/weekly?date=${formattedDate}`,
+        { withCredentials: true }
+      );
+
+      console.log('Received data:', workingTimeRes.data);
+      setWorkingTimeData(workingTimeRes.data);
+
+    } catch (err: any) {
+      console.error('Failed to fetch dashboard data:', err);
+      setError(err.response?.data?.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData(currentWeek);
+  }, [currentWeek]);
+
+  const handleWeekChange = (date: Date) => {
+    setCurrentWeek(date);
+  };
 
   const stats = [
-    { id: 1, name: 'Total Users', value: '1,234', icon: <Users className="h-6 w-6" /> },
-    { id: 2, name: 'Active Users', value: '891', icon: <UserCheck className="h-6 w-6" /> },
-    { id: 3, name: 'System Status', value: 'Healthy', icon: <Settings className="h-6 w-6" /> },
-    { id: 4, name: 'Security Level', value: 'High', icon: <Shield className="h-6 w-6" /> },
+    { 
+      icon: Users,
+      title: 'Total Users',
+      value: '12',
+      subtitle: 'Active users'
+    },
+    {
+      icon: DollarSign,
+      title: 'Monthly Plan',
+      value: '$3,000',
+      subtitle: 'Total users plan'
+    },
+    {
+      icon: Target,
+      title: 'Current Status',
+      value: '85%',
+      subtitle: 'Monthly progress'
+    },
+    {
+      icon: Award,
+      title: 'Top User',
+      value: 'John Doe',
+      subtitle: 'This month'
+    }
   ];
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
         <p className="text-gray-600">Welcome back, {user?.name}!</p>
       </div>
 
+      {error && (
+        <div className="mb-8 bg-red-50 text-red-600 p-4 rounded-md">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat) => (
-          <div key={stat.id} className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 p-3 rounded-md bg-blue-50 text-blue-600">
-                {stat.icon}
-              </div>
-              <div className="ml-4">
-                <h2 className="text-sm font-medium text-gray-500">{stat.name}</h2>
-                <p className="text-2xl font-semibold text-gray-800">{stat.value}</p>
-              </div>
-            </div>
-          </div>
+        {stats.map((stat, index) => (
+          <StatsCard
+            key={index}
+            icon={stat.icon}
+            title={stat.title}
+            value={stat.value}
+            subtitle={stat.subtitle}
+          />
         ))}
       </div>
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-800">Recent Activity</h2>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map((item) => (
-              <div key={item} className="flex items-start">
-                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-500 font-medium">U{item}</span>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-900">User Activity {item}</p>
-                  <p className="text-sm text-gray-500">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {new Date(Date.now() - item * 3600000).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <WeeklyWorkingTimeTable 
+          data={workingTimeData} 
+          loading={loading}
+          currentWeek={currentWeek}
+          onWeekChange={handleWeekChange}
+        />
+        <EarningChart data={earningData} />
       </div>
     </div>
   );
