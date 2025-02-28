@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, LayoutDashboard, Users, Menu, X, Clock } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Users, Menu, X, Clock, CreditCard } from 'lucide-react';
 
 const Navbar = () => {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
@@ -21,6 +21,7 @@ const Navbar = () => {
       { name: 'Target Times', path: '/target-times', icon: <Clock className="h-5 w-5" /> }
     ] : []),
     { name: 'Work Reports', path: '/reports', icon: <Clock className="h-5 w-5" /> },
+    { name: 'Transactions', path: '/transactions', icon: <CreditCard className="h-5 w-5" /> },
     { name: 'Profile', path: '/profile', icon: <User className="h-5 w-5" /> },
   ];
 

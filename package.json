@@ -11,6 +11,11 @@
     "server": "node server/index.js"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.0",
+    "@types/react-datepicker": "^6.2.0",
+    "@types/react-select": "^5.0.0",
+    "@types/react-select-country-list": "^2.2.3",
+    "@types/react-toastify": "^4.0.2",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
@@ -21,8 +26,11 @@
     "lucide-react": "^0.344.0",
     "mysql2": "^3.6.5",
     "react": "^18.3.1",
+    "react-datepicker": "^8.1.0",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.20.0"
+    "react-router-dom": "^6.20.0",
+    "react-select-country-list": "^2.2.3",
+    "react-toastify": "^11.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

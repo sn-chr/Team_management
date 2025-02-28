@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import reportRoutes from './routes/reports.js';
 import targetTimesRoutes from './routes/targetTimes.js';
 import dashboardRoutes from './routes/dashboard.js';
+import transactionRoutes from './routes/transactions.js';
 
 // Load environment variables
 dotenv.config();
@@ -95,6 +96,23 @@ const initDb = async () => {
     
     await pool.query(createTargetTimesTable);
     
+    // Create transactions table
+    const createTransactionsTable = `
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        client_name VARCHAR(255) NOT NULL,
+        client_country VARCHAR(100) NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        payment_type VARCHAR(50) NOT NULL,
+        transaction_date DATETIME NOT NULL,
+        note TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `;
+    
+    await pool.query(createTransactionsTable);
+    
     // Insert default target times if not exists
     const [existingTargets] = await pool.query('SELECT * FROM target_working_times');
     if (existingTargets.length === 0) {
@@ -132,6 +150,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/target-times', targetTimesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

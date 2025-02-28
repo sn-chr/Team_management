@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import Navbar from './components/Navbar';
 import WorkReports from './pages/WorkReports';
 import TargetTimeManagement from './pages/TargetTimeManagement';
+import Transactions from './pages/Transactions';
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -90,6 +91,14 @@ function App() {
                   <AdminRoute>
                     <TargetTimeManagement />
                   </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/transactions" 
+                element={
+                  <ProtectedRoute>
+                    <Transactions />
+                  </ProtectedRoute>
                 } 
               />
               <Route path="/" element={<Navigate to="/login" />} />
