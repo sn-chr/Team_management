@@ -33,5 +33,21 @@ export const timeFormat = {
   isValid: (timeStr: string): boolean => {
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     return timeRegex.test(timeStr);
-  }
+  },
+
+  // Add new method to handle time differences
+  formatTimeDifference: (difference: number): string => {
+    const isNegative = difference < 0;
+    const absoluteDiff = Math.abs(difference);
+    
+    const hours = Math.floor(absoluteDiff);
+    const minutes = Math.round((absoluteDiff - hours) * 60);
+    
+    // Handle case where rounding minutes results in 60
+    if (minutes === 60) {
+      return `${isNegative ? '-' : ''}${(hours + 1).toString().padStart(2, '0')}:00`;
+    }
+    
+    return `${isNegative ? '-' : ''}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  },
 };

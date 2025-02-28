@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { Clock, Calendar, Trash2, PencilIcon, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, Calendar, Trash2, PencilIcon, Search, ChevronLeft, ChevronRight, SlidersHorizontal, FileText, User } from 'lucide-react';
 import { timeFormat } from '../utils/timeFormat';
+import { Transition } from '@headlessui/react';
 
 interface WorkReport {
   id: number;
@@ -50,6 +51,8 @@ const WorkReports = () => {
     weekday_target: 16,
     weekend_target: 8
   });
+
+  const [showFilters, setShowFilters] = useState(false);
 
   // Filter reports based on search and date range
   const filteredReports = reports.filter(report => {
@@ -219,14 +222,100 @@ const WorkReports = () => {
           <h1 className="text-3xl font-bold text-gray-800">Work Reports</h1>
           <p className="text-gray-600">Track your daily working hours</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-        >
-          <Clock className="h-5 w-5 mr-2" />
-          Add Report
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center px-4 py-2 rounded-md transition-all duration-200 ${
+              showFilters 
+                ? 'bg-blue-50 text-blue-600 border border-blue-200' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <SlidersHorizontal className="w-5 h-5 mr-2" />
+            Filters
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
+            <Clock className="h-5 w-5 mr-2" />
+            Add Report
+          </button>
+        </div>
       </div>
+
+      {/* Filters Panel */}
+      <Transition
+        show={showFilters}
+        enter="transition-all duration-300 ease-out"
+        enterFrom="transform -translate-y-4 opacity-0"
+        enterTo="transform translate-y-0 opacity-100"
+        leave="transition-all duration-200 ease-in"
+        leaveFrom="transform translate-y-0 opacity-100"
+        leaveTo="transform -translate-y-4 opacity-0"
+      >
+        <div className="bg-white p-6 rounded-lg shadow-lg mb-6 border border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Description Search */}
+            <div className="flex-1 min-w-[240px]">
+              <label htmlFor="search" className="block text-sm font-medium text-gray-700 flex items-center mb-2">
+                <FileText className="w-4 h-4 mr-2" />
+                Description
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="search"
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Search by description..."
+                />
+              </div>
+            </div>
+
+            {/* Date Range */}
+            <div className="flex-1 min-w-[240px]">
+              <label className="block text-sm font-medium text-gray-700 flex items-center mb-2">
+                <Calendar className="w-4 h-4 mr-2" />
+                Start Date
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Calendar className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="date"
+                  value={dateRange.startDate}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-[240px]">
+              <label className="block text-sm font-medium text-gray-700 flex items-center mb-2">
+                <Calendar className="w-4 h-4 mr-2" />
+                End Date
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Calendar className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="date"
+                  value={dateRange.endDate}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                  className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
 
       {success && (
         <div className="bg-green-50 text-green-600 p-3 rounded-md mb-4">
@@ -239,66 +328,6 @@ const WorkReports = () => {
           {error}
         </div>
       )}
-
-      {/* Search and Filter Section */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-              Search Reports
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                id="search"
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by description or hours..."
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
-              Start Date
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Calendar className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                id="start_date"
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          
-          <div>
-            <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">
-              End Date
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Calendar className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                id="end_date"
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Form Modal */}
       {showForm && (
@@ -480,11 +509,11 @@ const WorkReports = () => {
                         <div className="ml-2 text-sm">
                           {getReportStatus(report).difference >= 0 ? (
                             <span className="text-green-600">
-                              (+{timeFormat.toHHMM(getReportStatus(report).difference)})
+                              (+{timeFormat.formatTimeDifference(getReportStatus(report).difference)})
                             </span>
                           ) : (
                             <span className="text-yellow-600">
-                              ({timeFormat.toHHMM(getReportStatus(report).difference)})
+                              ({timeFormat.formatTimeDifference(getReportStatus(report).difference)})
                             </span>
                           )}
                         </div>
