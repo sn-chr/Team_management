@@ -40,7 +40,7 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await axios.get<ApiResponse>('http://localhost:3090/api/users', {
+      const res = await axios.get<ApiResponse>('http://localhost:5000/api/users', {
         withCredentials: true
       });
       
@@ -75,7 +75,7 @@ const UserManagement = () => {
     try {
       if (editingUser) {
         const res = await axios.put(
-          `http://localhost:3090/api/users/${editingUser.id}`,
+          `http://localhost:5000/api/users/${editingUser.id}`,
           formData,
           { withCredentials: true }
         );
@@ -86,7 +86,7 @@ const UserManagement = () => {
         }
       } else {
         const res = await axios.post(
-          'http://localhost:3090/api/users',
+          'http://localhost:5000/api/users',
           formData,
           { withCredentials: true }
         );
@@ -130,7 +130,7 @@ const UserManagement = () => {
     }
     
     try {
-      const res = await axios.delete(`http://localhost:3090/api/users/${id}`, {
+      const res = await axios.delete(`http://localhost:5000/api/users/${id}`, {
         withCredentials: true
       });
       

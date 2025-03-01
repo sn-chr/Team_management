@@ -100,6 +100,7 @@ const initDb = async () => {
     const createTransactionsTable = `
       CREATE TABLE IF NOT EXISTS transactions (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        user_name VARCHAR(255) NOT NULL,
         client_name VARCHAR(255) NOT NULL,
         client_country VARCHAR(100) NOT NULL,
         amount DECIMAL(10, 2) NOT NULL,
@@ -158,7 +159,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3090;
+const PORT = process.env.PORT || 5000;
 
 // Initialize database and start server
 initDb().then(() => {

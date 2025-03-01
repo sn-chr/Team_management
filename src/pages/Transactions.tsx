@@ -4,17 +4,17 @@ import { Fragment } from 'react';
 import DatePicker from 'react-datepicker';
 import Select from 'react-select';
 import "react-datepicker/dist/react-datepicker.css";
-import { 
-  Plus, 
-  Calendar, 
-  Trash2, 
-  Edit2, 
-  Search, 
-  SlidersHorizontal, 
-  CreditCard, 
-  Wallet, 
-  Building2, 
-  Bitcoin, 
+import {
+  Plus,
+  Calendar,
+  Trash2,
+  Edit2,
+  Search,
+  SlidersHorizontal,
+  CreditCard,
+  Wallet,
+  Building2,
+  Bitcoin,
   DollarSign,
   User,
   Globe,
@@ -29,6 +29,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from '../context/ThemeContext';
 import { components } from 'react-select';
+import { useAuth } from '../context/AuthContext';
 
 interface Transaction {
   id: number;
@@ -38,11 +39,18 @@ interface Transaction {
   paymentType: string;
   date: Date;
   note: string;
+  userName: string;
 }
 
 interface SelectOption {
   value: string;
   label: string;
+}
+
+// Add this interface for User type
+interface User extends SelectOption {
+  id: number;
+  email?: string;
 }
 
 const paymentTypes: SelectOption[] = [
@@ -52,7 +60,7 @@ const paymentTypes: SelectOption[] = [
   { value: 'amex', label: 'American Express' },
   { value: 'mastercard', label: 'Mastercard' },
   { value: 'visa', label: 'Visa' },
-  
+
   // Digital Wallets
   { value: 'paypal', label: 'PayPal' },
   { value: 'google_pay', label: 'Google Pay' },
@@ -61,25 +69,25 @@ const paymentTypes: SelectOption[] = [
   { value: 'alipay', label: 'Alipay' },
   { value: 'wechat_pay', label: 'WeChat Pay' },
   { value: 'venmo', label: 'Venmo' },
-  
+
   // Bank Transfers
   { value: 'bank_transfer', label: 'Bank Transfer' },
   { value: 'wire_transfer', label: 'Wire Transfer' },
   { value: 'sepa', label: 'SEPA Transfer' },
   { value: 'ach', label: 'ACH Transfer' },
-  
+
   // Cryptocurrencies
   { value: 'bitcoin', label: 'Bitcoin (BTC)' },
   { value: 'ethereum', label: 'Ethereum (ETH)' },
   { value: 'usdt', label: 'Tether (USDT)' },
   { value: 'usdc', label: 'USD Coin (USDC)' },
-  
+
   // Other Digital Payment Methods
   { value: 'stripe', label: 'Stripe' },
   { value: 'klarna', label: 'Klarna' },
   { value: 'affirm', label: 'Affirm' },
   { value: 'wise', label: 'Wise (TransferWise)' },
-  
+
   // Traditional Methods
   { value: 'cash', label: 'Cash' },
   { value: 'check', label: 'Check' },
@@ -121,21 +129,22 @@ interface FormData {
   paymentType: SelectOption | null;
   date: Date;
   note: string;
+  userName: User | null;
 }
 
-// Update the formatCountryData function
+// Update the formatCountryData function to include full names
 const formatCountryData = () => {
   return countryList().getData().map(country => ({
-    value: country.value,
+    value: country.value.toLowerCase(),
     label: country.label,
-    flag: `https://flagcdn.com/w20/${country.value.toLowerCase()}.png` // Using flagcdn.com
+    flag: `https://flagcdn.com/w20/${country.value.toLowerCase()}.png`
   }));
 };
 
 // Update the getFlagEmoji function to handle country codes correctly
 const getFlagEmoji = (countryCode: string) => {
   if (!countryCode) return '';
-  
+
   try {
     // Convert country code to uppercase
     const code = countryCode.toUpperCase();
@@ -150,18 +159,30 @@ const getFlagEmoji = (countryCode: string) => {
   }
 };
 
+interface FilterData {
+  clientName: string;
+  clientCountry: SelectOption | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  minAmount: string;
+  maxAmount: string;
+}
+
 export default function Transactions() {
   const { theme } = useTheme();
+  const { user, isAdmin } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState<FormData>({
     clientName: '',
     clientCountry: null,
     amount: '',
     paymentType: null,
     date: new Date(),
-    note: ''
+    note: '',
+    userName: null
   });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -185,7 +206,6 @@ export default function Transactions() {
     setFilterData(prev => ({
       ...prev,
       startDate: date,
-      // Reset end date if it's before start date
       endDate: prev.endDate && date && prev.endDate < date ? null : prev.endDate
     }));
   };
@@ -200,7 +220,7 @@ export default function Transactions() {
   // Fetch transactions with enhanced error handling
   const fetchTransactions = async () => {
     try {
-      const response = await axios.get('http://localhost:3090/api/transactions', {
+      const response = await axios.get('http://localhost:5000/api/transactions', {
         withCredentials: true
       });
       const formattedTransactions = response.data.map((transaction: any) => ({
@@ -210,7 +230,8 @@ export default function Transactions() {
         amount: transaction.amount,
         paymentType: transaction.payment_type,
         date: new Date(transaction.transaction_date),
-        note: transaction.note || ''
+        note: transaction.note || '',
+        userName: transaction.user_name
       }));
       setTransactions(formattedTransactions);
     } catch (error: any) {
@@ -219,8 +240,23 @@ export default function Transactions() {
     }
   };
 
+  // Update the fetchUsers function
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/transactions/users', {
+        withCredentials: true
+      });
+      console.log(response.data)
+      setUsers(response.data);
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      notifyError(error.response?.data?.message || 'Failed to fetch users');
+    }
+  };
+
   useEffect(() => {
     fetchTransactions();
+    fetchUsers();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -232,16 +268,17 @@ export default function Transactions() {
         amount: Number(formData.amount),
         paymentType: formData.paymentType?.value || '',
         date: formData.date,
-        note: formData.note
+        note: formData.note,
+        userName: isAdmin ? formData.userName?.value : user?.name
       };
 
       if (isEditing && editingId) {
-        await axios.put(`http://localhost:3090/api/transactions/${editingId}`, transactionData, {
+        await axios.put(`http://localhost:5000/api/transactions/${editingId}`, transactionData, {
           withCredentials: true
         });
         notifySuccess('Transaction updated successfully');
       } else {
-        await axios.post('http://localhost:3090/api/transactions', transactionData, {
+        await axios.post('http://localhost:5000/api/transactions', transactionData, {
           withCredentials: true
         });
         notifySuccess('Transaction created successfully');
@@ -253,26 +290,30 @@ export default function Transactions() {
       resetForm();
       fetchTransactions();
     } catch (error: any) {
-      console.error('Error saving transaction:', error);
-      notifyError(error.response?.data?.message || 'Failed to save transaction');
+      console.error('Error submitting transaction:', error);
+      notifyError(error.response?.data?.message || 'Failed to submit transaction');
     }
   };
 
   const handleEdit = (transaction: Transaction) => {
-    const countryOption = countries.find(c => c.value === transaction.clientCountry.toLowerCase());
+    const countryOption = {
+      value: transaction.clientCountry.toLowerCase(),
+      label: countries.find(c => c.value === transaction.clientCountry.toLowerCase())?.label || transaction.clientCountry,
+      flag: `https://flagcdn.com/w20/${transaction.clientCountry.toLowerCase()}.png`
+    };
+    const userOption = users.find(u => u.value === transaction.userName);
+    
     setFormData({
       clientName: transaction.clientName,
-      clientCountry: countryOption || { 
-        value: transaction.clientCountry.toLowerCase(), 
-        label: transaction.clientCountry 
-      },
+      clientCountry: countryOption,
       amount: transaction.amount.toString(),
       paymentType: paymentTypes.find(pt => pt.value === transaction.paymentType) || {
         value: transaction.paymentType,
         label: transaction.paymentType
       },
       date: new Date(transaction.date),
-      note: transaction.note
+      note: transaction.note,
+      userName: userOption || null
     });
     setEditingId(transaction.id);
     setIsEditing(true);
@@ -282,7 +323,7 @@ export default function Transactions() {
   const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
       try {
-        await axios.delete(`http://localhost:3090/api/transactions/${id}`, {
+        await axios.delete(`http://localhost:5000/api/transactions/${id}`, {
           withCredentials: true
         });
         notifySuccess('Transaction deleted successfully');
@@ -301,7 +342,8 @@ export default function Transactions() {
       amount: '',
       paymentType: null,
       date: new Date(),
-      note: ''
+      note: '',
+      userName: null
     });
   };
 
@@ -310,10 +352,10 @@ export default function Transactions() {
     const matchesName = transaction.clientName.toLowerCase().includes(filterData.clientName.toLowerCase());
     const matchesCountry = !filterData.clientCountry || transaction.clientCountry.toLowerCase() === filterData.clientCountry.value.toLowerCase();
     const matchesDate = (!filterData.startDate || new Date(transaction.date) >= filterData.startDate) &&
-                       (!filterData.endDate || new Date(transaction.date) <= filterData.endDate);
+      (!filterData.endDate || new Date(transaction.date) <= filterData.endDate);
     const matchesAmount = (!filterData.minAmount || transaction.amount >= Number(filterData.minAmount)) &&
-                         (!filterData.maxAmount || transaction.amount <= Number(filterData.maxAmount));
-    
+      (!filterData.maxAmount || transaction.amount <= Number(filterData.maxAmount));
+
     return matchesName && matchesCountry && matchesDate && matchesAmount;
   });
 
@@ -349,7 +391,7 @@ export default function Transactions() {
     }),
     option: (base: any, state: any) => ({
       ...base,
-      backgroundColor: state.isFocused 
+      backgroundColor: state.isFocused
         ? theme === 'dark' ? '#374151' : '#EFF6FF'
         : theme === 'dark' ? '#1F2937' : 'white',
       color: theme === 'dark' ? '#E5E7EB' : '#111827',
@@ -374,15 +416,19 @@ export default function Transactions() {
 
   // Update the CountryOption component
   const CountryOption = ({ innerProps, label, data }: any) => (
-    <div 
-      {...innerProps} 
-      className="flex items-center p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+    <div
+      {...innerProps}
+      className="flex items-center p-1.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
     >
-      <img 
+      <img
         src={data.flag}
         alt={`${label} flag`}
         className="w-5 h-4 mr-2 object-cover rounded-sm"
         loading="lazy"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          target.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/No_flag.svg/2048px-No_flag.svg.png';
+        }}
       />
       <span className="text-gray-900 dark:text-gray-100">{label}</span>
     </div>
@@ -390,17 +436,19 @@ export default function Transactions() {
 
   // Update the SingleValue component
   const SingleValue = ({ children, ...props }: any) => (
-    <components.SingleValue {...props}>
-      <div className="flex items-center">
-        <img 
-          src={props.data.flag}
-          alt={`${children} flag`}
-          className="w-5 h-4 mr-2 object-cover rounded-sm"
-          loading="lazy"
-        />
-        <span>{children}</span>
-      </div>
-    </components.SingleValue>
+    <div className="flex items-center">
+      <img
+        src={props.data.flag}
+        alt={`${children} flag`}
+        className="w-5 h-4 mr-2 object-cover rounded-sm"
+        loading="lazy"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          target.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/No_flag.svg/2048px-No_flag.svg.png';
+        }}
+      />
+      <span>{children}</span>
+    </div>
   );
 
   const getPaymentIcon = (type: string) => {
@@ -433,15 +481,6 @@ export default function Transactions() {
         return <DollarSign className="w-5 h-5" />;
     }
   };
-
-  interface FilterData {
-    clientName: string;
-    clientCountry: SelectOption | null;
-    startDate: Date | null;
-    endDate: Date | null;
-    minAmount: string;
-    maxAmount: string;
-  }
 
   // Custom notification styles
   const notifySuccess = (message: string) => {
@@ -504,6 +543,29 @@ export default function Transactions() {
     });
   };
 
+  // Add this component for payment type option
+  const PaymentTypeOption = ({ innerProps, label, data }: any) => (
+    <div
+      {...innerProps}
+      className="flex items-center p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+    >
+      <div className="flex items-center w-full">
+        {getPaymentIcon(data.value)}
+        <span className="ml-2 text-gray-900 dark:text-gray-100">{label}</span>
+      </div>
+    </div>
+  );
+
+  // Add this component for payment type single value
+  const PaymentTypeSingleValue = ({ children, ...props }: any) => (
+    <components.SingleValue {...props}>
+      <div className="flex items-center">
+        {getPaymentIcon(props.data.value)}
+        <span className="ml-2">{children}</span>
+      </div>
+    </components.SingleValue>
+  );
+
   return (
     <div className="container mx-auto px-4 py-8 dark:bg-gray-900">
       <ToastContainer />
@@ -515,36 +577,38 @@ export default function Transactions() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center px-4 py-2 rounded-md transition-all duration-200 ${
-              showFilters 
-                ? 'bg-blue-50 text-blue-600 dark:bg-blue-900 dark:text-blue-300' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-            }`}
+            className={`flex items-center px-4 py-2 rounded-md transition-all duration-200 ${showFilters
+              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900 dark:text-blue-300'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
           >
             <SlidersHorizontal className="w-5 h-5 mr-2" />
             Filters
           </button>
-          <button
-            onClick={() => {
-              setIsEditing(false);
-              setFormData({
-                clientName: '',
-                clientCountry: null,
-                amount: '',
-                paymentType: null,
-                date: new Date(),
-                note: ''
-              });
-              setIsOpen(true);
-            }}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium 
-                     rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 
-                     dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 
-                     focus:ring-blue-500"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Add Transaction
-          </button>
+          {isAdmin &&
+            <button
+              onClick={() => {
+                setIsEditing(false);
+                setFormData({
+                  clientName: '',
+                  clientCountry: null,
+                  amount: '',
+                  paymentType: null,
+                  date: new Date(),
+                  note: '',
+                  userName: null
+                });
+                setIsOpen(true);
+              }}
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white 
+              ${isAdmin
+                  ? 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                  : 'bg-gray-400 cursor-not-allowed'}`}
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Transaction
+            </button>
+          }
         </div>
       </div>
 
@@ -621,9 +685,9 @@ export default function Transactions() {
                   selected={filterData.endDate}
                   onChange={handleEndDateChange}
                   selectsEnd
-                  startDate={filterData.startDate}
-                  endDate={filterData.endDate}
-                  minDate={filterData.startDate}
+                  startDate={filterData.startDate || undefined}
+                  endDate={filterData.endDate || undefined}
+                  minDate={filterData.startDate || undefined}
                   className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
                            focus:outline-none focus:ring-2 focus:ring-blue-500 
                            bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -722,35 +786,45 @@ export default function Transactions() {
                     Note
                   </div>
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center">
+                    <User className="w-4 h-4 mr-2" />
+                    User Name
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {currentItems.map((transaction) => (
-                <tr 
+                <tr
                   key={transaction.id}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {transaction.clientName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     <div className="flex items-center">
-                      <img 
+                      <img
                         src={`https://flagcdn.com/w20/${transaction.clientCountry.toLowerCase()}.png`}
                         alt={`${transaction.clientCountry} flag`}
                         className="w-5 h-4 mr-2 object-cover rounded-sm"
                         loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/No_flag.svg/2048px-No_flag.svg.png';
+                        }}
                       />
                       <span>
-                        {countries.find(c => c.value === transaction.clientCountry)?.label || transaction.clientCountry}
+                        {countries.find(c => c.value === transaction.clientCountry.toLowerCase())?.label}
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600 dark:text-green-400">
                     ${transaction.amount.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     <div className="flex items-center">
                       {getPaymentIcon(transaction.paymentType)}
                       <span className="ml-2">
@@ -758,23 +832,28 @@ export default function Transactions() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {new Date(transaction.date).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {transaction.note}
+                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                    <div className="max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap" title={transaction.note}>
+                      {transaction.note}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    {transaction.userName}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleEdit(transaction)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         <Edit2 className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => handleDelete(transaction.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
@@ -804,9 +883,8 @@ export default function Transactions() {
             <button
               key={page}
               onClick={() => setCurrentPage(page)}
-              className={`px-4 py-2 border rounded-md ${
-                currentPage === page ? 'bg-blue-600 text-white' : ''
-              }`}
+              className={`px-4 py-2 border rounded-md ${currentPage === page ? 'bg-blue-600 text-white' : ''
+                }`}
             >
               {page}
             </button>
@@ -823,9 +901,9 @@ export default function Transactions() {
 
       {/* Add/Edit Transaction Modal */}
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog 
-          as="div" 
-          className="relative z-10" 
+        <Dialog
+          as="div"
+          className="relative z-10"
           onClose={() => setIsOpen(false)}
         >
           <Transition.Child
@@ -851,17 +929,70 @@ export default function Transactions() {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl 
-                                      bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all"
-                >
+                <Dialog.Panel className="w-full max-w-md transform overflow-visible rounded-2xl 
+                                      bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all
+                                      relative z-10">
                   <Dialog.Title
                     as="h3"
                     className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4"
                   >
                     {isEditing ? 'Edit Transaction' : 'Add New Transaction'}
                   </Dialog.Title>
-                  
+
                   <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        User Name
+                      </label>
+                      <Select<User>
+                        value={formData.userName}
+                        onChange={(option) => setFormData(prev => ({ ...prev, userName: option }))}
+                        options={users}
+                        styles={{
+                          ...customSelectStyles,
+                          option: (base: any, state: any) => ({
+                            ...base,
+                            backgroundColor: state.isFocused
+                              ? theme === 'dark' ? '#374151' : '#EFF6FF'
+                              : theme === 'dark' ? '#1F2937' : 'white',
+                            color: theme === 'dark' ? '#E5E7EB' : '#111827',
+                            '&:hover': {
+                              backgroundColor: theme === 'dark' ? '#374151' : '#EFF6FF',
+                            },
+                            padding: '8px 12px',
+                          }),
+                          control: (base: any, state: any) => ({
+                            ...base,
+                            background: theme === 'dark' ? '#374151' : 'white',
+                            borderColor: state.isFocused 
+                              ? theme === 'dark' ? '#60A5FA' : '#3B82F6' 
+                              : theme === 'dark' ? '#4B5563' : '#D1D5DB',
+                            '&:hover': {
+                              borderColor: theme === 'dark' ? '#6B7280' : '#9CA3AF',
+                            },
+                            boxShadow: state.isFocused ? `0 0 0 2px ${theme === 'dark' ? 'rgba(96, 165, 250, 0.5)' : 'rgba(59, 130, 246, 0.5)'}` : 'none',
+                          }),
+                        }}
+                        className="mt-1"
+                        classNamePrefix="select"
+                        placeholder="Select user..."
+                        isSearchable
+                        required
+                        isDisabled={!isAdmin}
+                        noOptionsMessage={() => "No users found"}
+                        formatOptionLabel={(option: User) => (
+                          <div className="flex flex-col">
+                            <span className="font-medium">{option.value}</span>
+                            {option.email && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {option.email}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      />
+                    </div>
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Client Name
@@ -886,11 +1017,62 @@ export default function Transactions() {
                         options={countries}
                         value={formData.clientCountry}
                         onChange={(value: SelectOption | null) => setFormData({ ...formData, clientCountry: value })}
-                        styles={customSelectStyles}
-                        components={{ Option: CountryOption, SingleValue }}
+                        styles={{
+                          ...customSelectStyles,
+                          option: (base: any, state: any) => ({
+                            ...base,
+                            backgroundColor: state.isFocused
+                              ? theme === 'dark' ? '#374151' : '#EFF6FF'
+                              : theme === 'dark' ? '#1F2937' : 'white',
+                            color: theme === 'dark' ? '#E5E7EB' : '#111827',
+                            '&:hover': {
+                              backgroundColor: theme === 'dark' ? '#374151' : '#EFF6FF',
+                            },
+                            padding: '4px 8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }),
+                          control: (base: any, state: any) => ({
+                            ...base,
+                            background: theme === 'dark' ? '#374151' : 'white',
+                            borderColor: state.isFocused 
+                              ? theme === 'dark' ? '#60A5FA' : '#3B82F6' 
+                              : theme === 'dark' ? '#4B5563' : '#D1D5DB',
+                            '&:hover': {
+                              borderColor: theme === 'dark' ? '#6B7280' : '#9CA3AF',
+                            },
+                            minHeight: '36px',
+                            padding: '0 4px',
+                            boxShadow: state.isFocused ? `0 0 0 2px ${theme === 'dark' ? 'rgba(96, 165, 250, 0.5)' : 'rgba(59, 130, 246, 0.5)'}` : 'none',
+                          }),
+                          singleValue: (base: any) => ({
+                            ...base,
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: theme === 'dark' ? '#E5E7EB' : '#111827',
+                          }),
+                          menuPortal: (base: any) => ({
+                            ...base,
+                            zIndex: 9999
+                          }),
+                          menu: (base: any) => ({
+                            ...base,
+                            zIndex: 9999,
+                            backgroundColor: theme === 'dark' ? '#1F2937' : 'white',
+                            border: `1px solid ${theme === 'dark' ? '#4B5563' : '#E5E7EB'}`,
+                          })
+                        }}
+                        components={{
+                          Option: CountryOption,
+                          SingleValue
+                        }}
+                        menuPortalTarget={document.body}
+                        menuPosition="fixed"
                         isSearchable
-                        placeholder="Select a country"
+                        placeholder="Select a country..."
                         className="text-sm"
+                        required
+                        maxMenuHeight={300}
                       />
                     </div>
 
@@ -930,6 +1112,81 @@ export default function Transactions() {
                         />
                         <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none h-5 w-5" />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Payment Type
+                      </label>
+                      <Select
+                        options={groupedPaymentTypes}
+                        value={formData.paymentType}
+                        onChange={(value) => setFormData({ ...formData, paymentType: value })}
+                        styles={{
+                          ...customSelectStyles,
+                          menuPortal: (base: any) => ({
+                            ...base,
+                            zIndex: 9999,
+                          }),
+                          menu: (base: any) => ({
+                            ...base,
+                            zIndex: 9999,
+                            backgroundColor: theme === 'dark' ? '#1F2937' : 'white',
+                            border: `1px solid ${theme === 'dark' ? '#4B5563' : '#E5E7EB'}`,
+                          }),
+                          option: (base: any, state: any) => ({
+                            ...base,
+                            backgroundColor: state.isFocused
+                              ? theme === 'dark' ? '#374151' : '#EFF6FF'
+                              : theme === 'dark' ? '#1F2937' : 'white',
+                            color: theme === 'dark' ? '#E5E7EB' : '#111827',
+                            '&:hover': {
+                              backgroundColor: theme === 'dark' ? '#374151' : '#EFF6FF',
+                            },
+                            padding: '8px 12px',
+                          }),
+                          control: (base: any, state: any) => ({
+                            ...base,
+                            background: theme === 'dark' ? '#374151' : 'white',
+                            borderColor: state.isFocused 
+                              ? theme === 'dark' ? '#60A5FA' : '#3B82F6' 
+                              : theme === 'dark' ? '#4B5563' : '#D1D5DB',
+                            '&:hover': {
+                              borderColor: theme === 'dark' ? '#6B7280' : '#9CA3AF',
+                            },
+                            boxShadow: state.isFocused ? `0 0 0 2px ${theme === 'dark' ? 'rgba(96, 165, 250, 0.5)' : 'rgba(59, 130, 246, 0.5)'}` : 'none',
+                          }),
+                          group: (base: any) => ({
+                            ...base,
+                            paddingTop: '8px',
+                            paddingBottom: '8px',
+                            borderBottomWidth: '1px',
+                            borderBottomStyle: 'solid',
+                            borderBottomColor: theme === 'dark' ? '#4B5563' : '#E5E7EB',
+                          }),
+                          groupHeading: (base: any) => ({
+                            ...base,
+                            color: theme === 'dark' ? '#9CA3AF' : '#6B7280',
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            marginBottom: '8px',
+                            padding: '8px 12px',
+                          }),
+                        }}
+                        components={{
+                          Option: PaymentTypeOption,
+                          SingleValue: PaymentTypeSingleValue,
+                        }}
+                        menuPortalTarget={document.body}
+                        menuPosition="fixed"
+                        isSearchable
+                        placeholder="Select payment type..."
+                        className="text-sm"
+                        required
+                        maxMenuHeight={300}
+                      />
                     </div>
 
                     <div>

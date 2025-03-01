@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const res = await axios.get('http://localhost:3090/api/auth/me', {
+        const res = await axios.get('http://localhost:5000/api/auth/me', {
           withCredentials: true
         });
         
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       setError(null);
-      const res = await axios.post('http://localhost:3090/api/auth/login', {
+      const res = await axios.post('http://localhost:5000/api/auth/login', {
         email,
         password
       }, {
@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await axios.post('http://localhost:3090/api/auth/logout', {}, {
+      await axios.post('http://localhost:5000/api/auth/logout', {}, {
         withCredentials: true
       });
       setUser(null);

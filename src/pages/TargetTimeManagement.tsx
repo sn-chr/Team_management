@@ -20,7 +20,7 @@ const TargetTimeManagement = () => {
   useEffect(() => {
     const fetchTargetTimes = async () => {
       try {
-        const res = await axios.get("http://localhost:3090/api/target-times", {
+        const res = await axios.get("http://localhost:5000/api/target-times", {
           withCredentials: true,
         });
         setTargetTimes({
@@ -55,7 +55,7 @@ const TargetTimeManagement = () => {
         weekend_target: timeFormat.toDecimal(targetTimes.weekend_target),
       };
 
-      await axios.put("http://localhost:3090/api/target-times", payload, {
+      await axios.put("http://localhost:5000/api/target-times", payload, {
         withCredentials: true,
       });
 
